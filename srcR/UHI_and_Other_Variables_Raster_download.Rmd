@@ -7,6 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 gc()
+unlink(tempdir(), recursive = TRUE) 
+
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -50,11 +52,9 @@ invisible(lapply(
 
 ```
 
-
 ```{r}
 
 ```
-
 
 # Unzip Cities Shapefile if not present in directory
 ```{r}
@@ -158,22 +158,57 @@ world_city_map$Continent <- result
 ```{r UHI, echo=FALSE}
 terraOptions(verbose=TRUE)
 library(terra)
-open_tif <- function(tif_file, asraster = FALSE){
+check1 = tryCatch({
+open_tif <- function( tif_file, asraster = FALSE){
   if (asraster == TRUE)
     outfl <- terra::rast(tif_file)
   else
     outfl <- stack(tif_file)
-  #library(raster)
-  #my_raster <- raster(tif_file)
-  #crs(my_raster) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 return(outfl) #my_raster) # outfl)
 }
 
-ndviprocess <- FALSE
-s_water_process <- FALSE  #TRUE
+combine_tile_raster <- function(fileslist){    
+  nrast <- list()
+  nfirst = TRUE
+  fcnt <- 0
+  for (fl in fileslist){
+    # Load the rasters and extend them to a common extent
+    curraster <- terra::rast(fl)
+    nrastext<- ext(curraster)
+    #nrast<- append(nrast, curraster)
+    fcnt <- fcnt+1
+    if (nfirst){
+      common_extent <- nrastext
+      nfirst= FALSE
+      }
+    else
+      common_extent <- union(common_extent, nrastext)
+  }
+  
+  frstrstr <-TRUE
+  for (fl in fileslist){
+    # Load the rasters and extend them to a common extent
+      rstr <- terra::rast(fl)
+      rstr1 <- extend(rstr, common_extent)
+      if (frstrstr){
+        combined_raster <- rstr1
+        frstrstr = FALSE
+        }
+      else
+        combined_raster <- c(combined_raster,rstr1 )
+        #print('second file')
+  }
+  print(combined_raster)
+  return(combined_raster)
+}
+
+ndviprocess <- TRUE #  FALSE # 
+s_water_process <- TRUE # FALSE  #
 
 uhi <- open_tif("../data/10_raw_Other_variables/UHI_yearly_pixel_2018.tif") 
+
+# sfiles <- list.files("../data/10_raw_Other_variables/", pattern = "*.tif$", full.names = FALSE)
 
 surfacewater_list <- list()
 if (s_water_process){
@@ -185,22 +220,30 @@ if (s_water_process){
   # surfacewater6 <- open_tif("../data/10_raw_Other_variables/SurfaceWater_2018_30m_30_5.tif", FALSE) 
   # surfacewater_list = list(surfacewater0, surfacewater1, surfacewater2, surfacewater3,
   #                    surfacewater4, surfacewater5)
-  sfiles <- list.files("../data/10_raw_Other_variables/", pattern = "/SurfaceWater_2018_30m_30_*.tif$", full.names = FALSE)
-  surfacewater_list <- open_tif(sfiles)
+  #sfiles <- list.files("../data/10_raw_Other_variables/", pattern = ".tif$", full.names = TRUE) 
+  ##SurfaceWater_2018_30m_30_*
+  
+  sfiles <- list.files("../data/10_raw_Other_variables/", pattern = ".tif$", all.files= T, full.names= T) 
+  nfiles <- list.files("../data/10_raw_Other_variables/NDVI", pattern = ".tif$", full.names = TRUE) 
+  #SurfaceWater_2018_30m_30_*
+  
+  #surfacewater_list <- terra::import(sfiles) 
+  #surfacewater_list <- open_tif(sfiles, TRUE) 
+  
   swatercsv = read_csv("../data/10_raw_Other_variables/City_surface.csv") #, header = TRUE)
+
+  #s_water_process = FALSE
   }
 
 if (ndviprocess){
+  
   ndvicsv = read_csv("../data/10_raw_Other_variables/City_NDVI_files.csv") #, header = TRUE)
-  nfiles <- list.files("../data/10_raw_Other_variables/", pattern = "/Global_NDVI_*.tif$",
-                       full.names = FALSE)
-  ndvi_list <- open_tif(sfiles)
+  names(ndvicsv)[2] <- "city"
+  nfiles <- list.files("../data/10_raw_Other_variables/NDVI", pattern = "*.tif$", full.names = TRUE)
+  nfilelist <-list()
 
   #ndvi <- open_tif("../data/10_raw_Other_variables/MOD_NDVI_M_2018-03-01_rgb_3600x1800.tif") 
-
-  #library(raster)
-  #my_raster <- raster("path_to_your_file.tif")
-  #crs(uhi) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+   
 }
 
 uhi
@@ -211,12 +254,6 @@ uhi_night <- uhi[["Nightime"]]
 uhi_day
 uhi_night
 #uhi_combined
-#head(uhi_df)
-
-#print(uhi)
-#head(values(uhi))
-#print(proj4string(uhi))
-#print(extent(uhi))
 
 #, b = 3,         
 #plotRGB( uhi)  #, 3,2,1) #,
@@ -224,10 +261,15 @@ uhi_night
         #scale = 800,
         #stretch = "hist")
 
-#ggplot() +
-#  geom_raster(data = uhi_df,
-#              aes(x = x, y = y, alpha = Daytime)) + 
-#  coord_equal()
+  #ggplot() +
+  #  geom_raster(data = uhi_df,
+  #              aes(x = x, y = y, alpha = Daytime)) + 
+  #  coord_equal()
+}, error = function(e){
+  unlink(tempdir(), recursive = TRUE) 
+  gc()
+  }, finally = function(f){})
+
 ```
 
 ## Crop Cities from world map
@@ -238,288 +280,463 @@ library(dplyr)
 library(terra)
 library(sf)
 library(readr)
-crop_city <- function(tif_raster, cty_nm){
-  city_sf <- world_city_map %>%
-    filter(name_conve %in% cty_nm)
-  
-  city_variable <- terra::crop(  tif_raster, city_sf)
-  
+check = tryCatch({
+  crop_city <- function(tif_raster, cty_nm){
+    city_sf <- world_city_map %>%
+      filter(name_conve %in% cty_nm)
     
-  # crop city height from building_h object
-  #city_variable <- terra::crop(
-  #  tif_raster,
-  #  #convert to terra friendly format
-  #  terra::vect(city_sf), 
-  #  # crop the inside
-  #  snap = "in", 
-  #  # remove everything except city_sf
-  #  mask = T
-  #)
-  
-  # Set a timeout of 5 seconds 
-  #options(timeout = 15)
-  
-}
+    city_variable <- terra::crop(  tif_raster, city_sf)
     
-city_mean <- function(city_variable){  
-  # terra::aggregate to reduce dim
-  city_variable_agg <- city_variable |>
-    terra::aggregate( fact = 3)
-  return(city_variable_agg)
-}
-
-city_meanval <- function(city_variable ){
-  mean_df <- colMeans(city_variable, na.rm = TRUE)
-  totcol <- ncol(city_variable)
-  print(totcol)
-  meancolvalue <- mean_df[totcol][1] # colmn]  #Daytime]
-  #meancolvalue <-0
-  print(meancolvalue)
-  print(mean_df)
-  return(meancolvalue)
-}
+    # crop city height from building_h object
+    #city_variable <- terra::crop(
+    #  tif_raster,
+    #  #convert to terra friendly format
+    #  terra::vect(city_sf), 
+    #  # crop the inside
+    #  snap = "in", 
+    #  # remove everything except city_sf
+    #  mask = T
+    #)
     
-city_to_df <- function(city_variable, ncolmn){    
-  # convert raster data to dataframe
-  city_variable_df = as.data.frame(
-    city_variable, 
-    xy = T, 
-    na.rm = T
-  )
-  head(city_variable_df)
-  city_variable_df<- (city_variable_df) %>%
-     filter( is.numeric(as.numeric(as.character(city_variable_df$ncolmn) )) )
-  # Convert all values to numeric
-  city_variable_df[] <- lapply(city_variable_df, function(x) as.numeric(as.character(x)))
-  # Replace NA values with zero
-  city_variable_df[is.na(city_variable_df)] <- 0
-  return(city_variable_df)
-}
-
-#Save raster
-save_raster<- function(city_variable, rastername){
-  # Output Folder
-  output_folder <- "../data/11_Output_R/city_rasters/"
-
-  # Check if the output folder exists, if not, create it
-  if (!file.exists(output_folder)) {
-    dir.create(output_folder, recursive = TRUE)
+    # Set a timeout of 5 seconds 
+    #options(timeout = 15)
+    
   }
-
-  # Specify the file path where we want to save the raster
-  fl = paste(city_name,"_",rastername,".tif")
-  print(rastername)
-  output_file <- paste(output_folder, fl, sep = "" ) #city_name, sep = "")
-
-  # Write the raster to a GeoTIFF file
-  writeRaster(city_variable, filename = output_file, overwrite = TRUE)
-  
-  # Set a timeout of 5 seconds 
-  #options(timeout = 5)
-  
-}
-Process_surface_water<- function( city_name){
-}
-
-
-
-start.time <- Sys.time()
-nextfive <-0
-counter <- 0
-steps <- 1 #300
-
-ctystart <- (nextfive* steps)+1
-ctyend <- ctystart+ (nextfive* steps) -1
-n <- ctyend  # 600
-
-# Create the dataframe
-AllCityMeans <- tibble(
-  city = character(),
-  mean_uhi_daytime = numeric(),
-  mean_uhi_Nighttime = numeric(),
-  mean_uhi_DayNight  = numeric(),
-  mean_surface_water  = numeric(),
-  mean_ndvi = numeric()
-)
-meansurfacewater <-0
-meanndvi <-0
-print(AllCityMeans)
-
-
-for (city_name in city_names_list) {
-  if (counter< ctystart ){
-    counter <- counter +1
-    next
-  }
-  
-  print(city_name)
-
-  city_sf <- world_city_map %>%
-    filter(name_conve %in% city_name)
-
-  
-  city_variable <- terra::crop(  uhi_day, city_sf)
-  print(city_variable )
-  
-
-  
-  city_df <- city_to_df(city_variable, 'daytime')
-  head(city_df)
-  meanDaytimeval <- city_meanval(city_df )
-
-  city_night <- terra::crop(  uhi_night, city_sf)
-  print(city_night )
-  city_Night_df <- city_to_df(city_night, 'nighttime')
-  head(city_Night_df)
-  meanNighttime <- city_meanval(city_Night_df )
-    
-  city_daynight <- terra::crop(  uhi, city_sf)
-  save_raster(city_daynight, "uhi") # save raster
-  
-  print(city_daynight )
-  city_dayNight_df <- city_to_df(city_daynight, 'daynight')
-  city_dayNight_df$daynight <- ( city_dayNight_df$Daytime + 
-    city_dayNight_df$Nightime )
-  head(city_Night_df)
-  mean_day_night <- city_meanval( city_dayNight_df )  
-  
-  if (s_water_process){
-    swfile = FALSE
-    
-    fls <- swatercsv[swatercsv$city == city_name, ]
-    flscount <- nrow(fls)
-    firstfl = TRUE
-    for (i in 1:nrow(fls)){ #(surfacewater_raster in surfacewater_list)
-      rst <- fls$SurfaceFile
-      if (rst > 0){
-        srast = concats('SurfaceWater_2018_30m_30_',as.character(rst-1))
       
-        surfacewater_raster <- terra::rast[surfacewater_list[srast]]
-        city_surfacewater <- terra::crop( surfacewater_raster, city_sf)
-        flname = "surfacewater"
-        if (flscount > 0)
-          flname = "surfacewater_"+as.character(i)
-        save_raster(city_surfacewater, flname ) # save raster
-        df <- city_to_df(city_surfacewater, 'waterclass')
-        if (firstfl){
-          city_surfacewater_df <- df
-          first <- FALSE }
-        else
-          city_surfacewater_df <- rbind(city_surfacewater_df, df)
-        
-        mean_SWATER <- city_meanval( city_surfacewater_df )  
-        meansurfacewater <-0    
-        if (swfile == TRUE)
-          print(city_surfacewater )
-          #city_surfacewater_df <- city_to_df(city_surfacewater, 'waterclass')
-          #head(city_surfacewater)
-          #meansurfacewater <- city_meanval(city_surfacewater_df)
-      }
-    }  
+  city_mean <- function(city_variable){  
+    # terra::aggregate to reduce dim
+    city_variable_agg <- city_variable |>
+      terra::aggregate( fact = 3)
+    return(city_variable_agg)
   }
   
-  
-  meanndvi <- 0
-  # NDVI processing
-  if (ndviprocess){
-    fls <- ndvicsv[ndvicsv$city == city_name, ]
-    flscount <- nrow(fls)
-    firstfl = TRUE
-    for (i in 1:nrow(fls)){ #(surfacewater_raster in surfacewater_list)
-      rst <- fls$ndvi_file_name
-      if (len(rst) > 0){
-        nrast = concats('SurfaceWater_2018_30m_30_',as.character(rst-1))
+  city_meanval <- function(city_variable ){
+    mean_df <- colMeans(city_variable, na.rm = TRUE)
+    totcol <- ncol( city_variable)
+    #print(totcol)
+    meancolvalue <- mean_df[totcol][1] # colmn]  #Daytime]
+    #meancolvalue <-0
+    print( paste0('Mean ', as.character(meancolvalue)) )
+    #print(mean_df)
+    return(meancolvalue)
+  }
       
-        ndvi_raster <- terra::rast[rst]
-        city_ndvi <- terra::crop( ndvi_raster, city_sf)
-        flname = "surfacewater"
-        if (flscount > 0)
-          flname = "ndvi_"+as.character(i)
-        save_raster(city_ndvi, flname ) # save raster
-        df <- city_to_df(city_ndvi, 'waterclass')
-        if (firstfl){
-          city_ndvi_df <- df
-          first <- FALSE }
-        else
-          city_ndvi_df <- rbind(city_ndvi_df, df)
-    
-    
-        # city_ndvi <- terra::crop(  ndvi, city_sf)
-        # save_raster(city_daynight, "ndvi") # save raster
-        # 
-        # print(city_daynight )
-        # city_ndvi_df <- city_to_df(city_ndvi, 'ndvi')
-        # head(city_ndvi_df)
-        mean_ndvi <- city_meanval( city_ndvi_df )  
-      }
+  city_to_df <- function(city_variable, ncolmn){    
+    # convert raster data to dataframe
+    city_variable_df = as.data.frame(
+      city_variable, 
+      xy = T, 
+      na.rm = T
+    )
+    head(city_variable_df)
+    city_variable_df<- (city_variable_df) %>%
+       filter( is.numeric(as.numeric(as.character(city_variable_df$ncolmn) )) )
+    # Convert all values to numeric
+    city_variable_df[] <- lapply(city_variable_df, function(x)
+      as.numeric(as.character(x)))
+    # Replace NA values with zero
+    city_variable_df[is.na(city_variable_df)] <- 0
+    return(city_variable_df)
+  }
+  
+  #Save raster
+  save_raster<- function(city_variable, rastername, ctynm=""){
+    # Output Folder
+    output_folder <- "../data/11_Output_R/city_rasters/"
+  
+    # Check if the output folder exists, if not, create it
+    if (!file.exists(output_folder)) {
+      dir.create(output_folder, recursive = TRUE)
     }
+    if (ctynm=="")
+      cty_nm <- city_name 
+  
+    # Specify the file path where we want to save the raster
+    fl = paste0(ctynm,"_",rastername,".tif", sep = "")
+    print( paste0('Raster saved to ', fl))
+    output_file <- paste0(output_folder, fl, sep = "" ) #city_name, sep = "")
+  
+    # Write the raster to a GeoTIFF file
+    writeRaster(city_variable, filename = output_file, overwrite = TRUE)
+    
+    # Set a timeout of 5 seconds 
+    #options(timeout = 5)
+    
   }
   
-  # Add a record to the dataframe
-  AllCityMeans <- AllCityMeans %>%
-  add_row(
-    city = city_name,
-    mean_uhi_daytime = meanDaytimeval,
-    mean_uhi_Nighttime = meanNighttime,
-    mean_uhi_DayNight  = mean_day_night,
-    mean_surface_water = meansurfacewater,
-    mean_ndvi = meanndvi
+  Process_other_variable <- function( csvfl, pctyname="", variable_name='S_WATER'){
+    
+    #fls <- ndvicsv[ndvicsv$city == city_name, ]
+    #flscount <- nrow(fls)
+     
+    filteredcsv <- csvfl 
+    firstfl <- TRUE
+    
+    meanvalue <-0
+    ncnt<-0
+    errmsge <- ""
+    fcsv <- ""
+    splitcount <- sum(filteredcsv[,2]  == pctyname)      
+    meancount <- count(AllvarMean)
+
+    for (rw in rownames(filteredcsv) ){
+      if (length(pctyname) >0 ){
+        if (!(filteredcsv[rw,2]  == pctyname))
+          next
+      }
+      else
+      {
+        currct <- filteredcsv[rw,2]
+      }
+      mean_value <-0
+       
+      tif_flname <- filteredcsv[rw,4]
+      cty <- filteredcsv[rw,2]
+      cty2 <- as.character(filteredcsv[rw,2])   # Added as error during add row
+
+      if (ncnt > n)
+        break
+      
+      ncnt <- ncnt+1
+      
+      # city_sf1 <- world_city_map %>%
+      # filter(name_conve %in%  cty )  # city_name)  #
+      city_sf1 <-city_sf   # Added to preserve original city name 
+
+      if (firstfl){
+        tiffl <- tif_flname  # 'ndvi_file_name'] #ndvicsv$ndvi_file_name
+
+        pathfl <- paste0(str_trim('../data/10_raw_Other_variables/'),variable_name,'/',
+                         str_trim(tiffl), sep="")
+        othvar_raster<- open_tif( pathfl , TRUE)
+        
+      }
+      else
+        if (tiffl != tif_flname ){
+          tiffl <- tif_flname
+          pathfl <- paste0(str_trim('../data/10_raw_Other_variables/'),variable_name,'/',
+                          str_trim(tiffl) , sep="")
+
+          othvar_raster<- open_tif( pathfl , TRUE)
+          
+
+        }
+
+      chk = tryCatch({
+        
+        city_othvar <- terra::crop(  othvar_raster, city_sf1)
+        pfx = variable_name #"ndvi"
+        if (ncnt > 1)
+          pfx= paste0( variable_name, as.character(ncnt))
+        save_raster(city_othvar, pfx , cty) # save raster
+
+        city_othvar_df <- city_to_df(city_othvar, variable_name)
+  
+        if (splitcount> 1){
+          if (firstfl){
+            city_othvar_df0 <- city_othvar_df 
+            # dfcnt <- count(city_othvar_df )
+            # print('rec1')
+            # print(dfcnt)
+            firstfl <- FALSE
+          }
+          else
+          {
+            # dfcnt <- count(city_othvar_df )
+            # print('rec2 Before merge')
+            # print(dfcnt)
+            city_othvar_df2 <-  rbind(city_othvar_df0, city_othvar_df)
+            city_othvar_df0 <- city_othvar_df2
+            city_othvar_df  <- city_othvar_df2
+            # dfcnt <- count(city_othvar_df )
+            # print('rec2')
+            # print(dfcnt)
+          }
+          if (ncnt == splitcount)
+            {
+            dfcnt <- count(city_othvar_df )
+            print('Total Records in dataframe')
+            print(dfcnt)
+            }
+        }
+        
+        if (ncnt == splitcount){
+          head(city_othvar_df)
+          mean_value <- city_meanval( city_othvar_df )
+        }
+        
+      }, error = function(e){ 
+        mean_value <- -999999999
+        firstfl <- FALSE
+        print( paste0("Cannot crop city ", pctyname ))
+        errmsge <- paste0("cannot crop ",variable_name, ' of ',pctyname, ' ',tiffl)
+        Allerror <- Allerror %>%
+          add_row( city = cty2,
+                   variabl = paste(variable_name, tiffl)
+                   )
+        return(-999999999)
+        })
+      
+      
+      apprec = (counter==0) 
+      if (splitcount == ncnt){
+        # print('AllvarMean')
+        # head(AllvarMean)
+        
+        if (variable_name == 'NDVI'){
+          AllvarMean <- AllvarMean %>%
+            add_row( city = cty2,
+                     mean_ndvi = as.numeric(mean_value),
+                     err = errmsge  )
+        
+          nextfivefl <- as.character(nextfive)
+          # Save the data frame to a CSV file
+  
+          write.csv(AllvarMean, paste0(
+            "../data/11_Output_R/Citywise Mean ",variable_name, nextfivefl,".csv", sep=""),
+            row.names = FALSE)} # , append=TRUE)
+        else{
+          AllMeanSwater <- AllMeanSwater %>%
+            add_row( city = cty2,
+                     mean_swater = as.numeric(mean_value),
+                     err = errmsge
+                   )
+
+          nextfivefl <- as.character(nextfive)
+          # Save the data frame to a CSV file
+  
+          write.csv(AllMeanSwater, paste0(
+            "../data/11_Output_R/Citywise Mean Surface water ", nextfivefl,".csv", sep=""),
+            row.names = FALSE) # , append=TRUE) 
+          }
+      }
+      firstfl <- FALSE
+    }
+  return( mean_value)
+  }
+  
+  start.time <- Sys.time()
+  nextfive <-0  #28
+  counter <- 0
+  steps <- 5 #300
+  
+  ctystart <- (nextfive* steps)
+  ctyend <- (ctystart+ steps )
+  n <- ctyend  # 600
+  
+  # Create the dataframe
+  AllCityMeans <- tibble(
+    city = character(),
+    mean_ndvi = numeric(),
+    mean_surface_water  = numeric(),
+    mean_uhi_DayNight  = numeric(),
+    mean_uhi_daytime = numeric(),
+    mean_uhi_Nighttime = numeric()
   )
+  meansurfacewater <-0
+  meanndvi <-0
+  
+  AllvarMean <- tibble(
+    city = character(),
+    mean_ndvi = numeric(),
+    err = character()
+    )
+  AllMeanSwater <- tibble(
+    city = character(),
+    mean_swater = numeric(),
+    err = character()
+    )
+  Allerror <- tibble(
+    city = character(),
+    variabl = character()
+    )
+  
   #print(AllCityMeans)
-  print(AllCityMeans)
-  nextfivefl <- as.character(nextfive)
+  
+  Allctylst <-city_names_list
+  currcty <- as.list(Allctylst[ctystart:ctyend])
+  # currctylist <- list()
+  # # 
+  # for (ccty in currcty){
+  #    lc <- length(currctylist)
+  #    currctylist[lc+1] <-ccty
+  # }
+  # print('citylists--')
+  # print(  currcty )
+  # print(currctylist)
+
+  
+     
+  #ndvicsv <- ndvicsv[ndvicsv$city %in% currctylist, ] 
+  # %>% filter(  city %in% ctylist)
+  #print('ndvicsv')
+  #print( ndvicsv)  
+  for (city_name in city_names_list) {
+    if (counter< ctystart ){
+      counter <- counter +1
+      next
+    }
+
+    cty_raster <-  city_name   
+    print(paste0('UHI data for city ', city_name))
+  
+    city_sf <- world_city_map %>%
+      filter(name_conve %in% city_name)
+    
+    city_variable <- terra::crop(  uhi_day, city_sf)
+    #print(city_variable )
+    
+    
+    city_df <- city_to_df(city_variable, 'daytime')
+    print('daytime')    
+    head(city_df)
+    meanDaytimeval <- city_meanval(city_df )
+  
+    city_night <- terra::crop(  uhi_night, city_sf)
+    #print(city_night )
+    city_Night_df <- city_to_df(city_night, 'nighttime')
+    print('nighttime')
+    head(city_Night_df)
+    meanNighttime <- city_meanval(city_Night_df )
+      
+    city_daynight <- terra::crop(  uhi, city_sf)
+    save_raster(city_daynight, "uhi", cty_raster) # save raster
+    
+    #print(city_daynight )
+    city_dayNight_df <- city_to_df(city_daynight, 'daynight')
+    city_dayNight_df$daynight <- ( city_dayNight_df$Daytime + 
+      city_dayNight_df$Nightime )
+    
+    print('Day & night time')    
+    head(city_Night_df)
+    mean_day_night <- city_meanval( city_dayNight_df )  
+    
+    if (s_water_process){  
+      # Create the dataframe
+
+      errmsge <-""
+      meansurfacewater<-  Process_other_variable( swatercsv,  city_name, 'SWATER'  ) 
+
+      if (meansurfacewater==-999999999)
+      {
+        meansurfacewater<- 0
+        errmsg <- paste0("Error in ",city_name)
+      }
+      AllMeanSwater <- AllMeanSwater %>%
+        add_row( city = city_name ,
+                 mean_swater = as.numeric(meansurfacewater),
+                 err = errmsge
+                 )
+      nextfivefl <- as.character(nextfive)
+      # Save the data frame to a CSV file
+
+      write.csv(AllMeanSwater, paste0(
+        "../data/11_Output_R/Citywise Mean Surface water ",nextfivefl,".csv", sep=""),
+        row.names = FALSE) #, append=TRUE)
+
+    }
+    
+    meanndvi <- 0
+    # NDVI processing 
+  
+    if (ndviprocess){   # Using spat raster instead
+      # names(ndvicsv)[2] <- "city"
+      # if (length(currcty) > 0){
+      #   ndvicsv1 <- ndvicsv %>% filter(  city %in% currcty)
+      #   print(ndvicsv1[,])
+      # }
+      
+      # Create the dataframe
+
+      errmsge <-""
+      meanndvi<-  Process_other_variable( ndvicsv,  city_name, 'NDVI'  ) 
+      # Process_NDVI( ndvicsv,  city_name    ) #currctylist )
+      if (meanndvi==-999999999)
+      {
+        meanndvi<- 0
+        errmsg <- paste0("Error in ",city_name)
+      }
+      AllvarMean <- AllvarMean %>%
+        add_row( city = city_name ,
+                 mean_ndvi = as.numeric(meanndvi),
+                 err = errmsge
+                 )
+      nextfivefl <- as.character(nextfive)
+      # Save the data frame to a CSV file
+      
+      write.csv(AllvarMean, paste0(
+        "../data/11_Output_R/Citywise Mean NDVI",nextfivefl,".csv", sep=""),
+        row.names = FALSE) #, append=TRUE)
+      
+      #ndviprocess <- FALSE
+      }  
+    
+    # Add a record to the dataframe
+    AllCityMeans <- AllCityMeans %>%
+    add_row(
+      city = city_name,
+      mean_ndvi = meanndvi,
+      mean_surface_water = meansurfacewater,
+      mean_uhi_DayNight  = mean_day_night,
+      mean_uhi_daytime = meanDaytimeval,
+      mean_uhi_Nighttime = meanNighttime
+    )
+    #print(AllCityMeans)
+    nextfivefl <- as.character(nextfive)
+    # Save the data frame to a CSV file
+    write.csv(AllCityMeans, paste("../data/11_Output_R/Citywise Means",nextfivefl,".csv"), 
+              row.names = TRUE) #, append=TRUE)
+    #write.csv(AllCityMeans, "../data/11_Output_R/Citywise Means.csv", 
+    #          row.names = !file.exists("../data/11_Output_R/Citywise Means.csv"),
+    #          append=TRUE)
+  
+    counter <- counter + 1
+    if (counter >= n) {
+      break  # Break the loop when counter reaches n
+    }  
+  #print(AllCityMeans)
   # Save the data frame to a CSV file
-  write.csv(AllCityMeans, paste("../data/11_Output_R/Citywise Means",nextfivefl,".csv"), 
-            row.names = TRUE,
-            append=TRUE)
-  #write.csv(AllCityMeans, "../data/11_Output_R/Citywise Means.csv", 
-  #          row.names = !file.exists("../data/11_Output_R/Citywise Means.csv"),
-  #          append=TRUE)
-
-
+  #write.csv(AllCityMeans, "../data/10_raw_Other_variables/Citywise Means.csv", row.names = TRUE)
+    
   
-  counter <- counter + 1
-  if (counter >= n) {
-    break  # Break the loop when counter reaches n
-  }  
-#print(AllCityMeans)
-# Save the data frame to a CSV file
-#write.csv(AllCityMeans, "../data/10_raw_Other_variables/Citywise Means.csv", row.names = TRUE)
+  }
+  print(AllvarMean)
+  print(AllCityMeans)
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  time.taken
+  # Save the data frame to a CSV file
+  #write.csv(AllCityMeans, "../data/10_raw_Other_variables/Citywise Means.csv", row.names = TRUE)
   
-
-}
-print(AllCityMeans)
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken
-# Save the data frame to a CSV file
-#write.csv(AllCityMeans, "../data/10_raw_Other_variables/Citywise Means.csv", row.names = TRUE)
-
-unlink(tempdir(), recursive = TRUE) 
-gc()
+  unlink(tempdir(), recursive = TRUE) 
+  gc()
+  }, finally = function(f){
+    unlink(tempdir(), recursive = TRUE) 
+    gc()
+    })
 
 ```
 
 ```{r - Not used now Open Files by chunk and convert to dataframe}
-raster_to_df <- function(raster_path) {
-  # Open the raster
-  r <- raster(raster_path)
-  
-  # Create an empty dataframe to store results
-  result_df <- data.frame()
-  
-  # Loop through rows in chunks
-  for (row in 1:nrow(r)) {
-    chunk <- getValuesBlock(r, row=row, nrows=100)
-    chunk_df <- as.data.frame(chunk)
-    chunk_df$row <- row  # Add row index
-    
-    # Append the chunk to the result dataframe
-    result_df <- bind_rows(result_df, chunk_df)
-  }
-  
-  return(result_df)
-}
+# raster_to_df <- function(raster_path) {
+#   # Open the raster
+#   r <- raster(raster_path)
+#   
+#   # Create an empty dataframe to store results
+#   result_df <- data.frame()
+#   
+#   # Loop through rows in chunks
+#   for (row in 1:nrow(r)) {
+#     chunk <- getValuesBlock(r, row=row, nrows=100)
+#     chunk_df <- as.data.frame(chunk)
+#     chunk_df$row <- row  # Add row index
+#     
+#     # Append the chunk to the result dataframe
+#     result_df <- bind_rows(result_df, chunk_df)
+#   }
+#   
+#   return(result_df)
+# }
 
 #raster_fl <- "../data/10_raw_Other_variables/UHI_Daytime_300_300_0.tif"
 #df <- raster_to_df(raster_fl)
@@ -562,8 +779,262 @@ raster_to_df <- function(raster_path) {
 #  coord_equal()
 
 
+# Not used
+# if (FALSE){  # (ndviprocess){   # Using spat raster instead
+#     fls <- ndvicsv[ndvicsv$city == city_name, ]
+#     flscount <- nrow(fls)
+#     firstfl = TRUE
+#     for (i in 1:nrow(fls)){ #(surfacewater_raster in surfacewater_list)
+#       rst <- fls$ndvi_file_name
+#       if (len(rst) > 0){
+#         nrast = concats('SurfaceWater_2018_30m_30_',as.character(rst-1))
+#       
+#         ndvi_raster <- terra::rast[rst]
+#         city_ndvi <- terra::crop( ndvi_raster, city_sf)
+#         flname = "surfacewater"
+#         if (flscount > 0)
+#           flname = "ndvi_"+as.character(i)
+#         save_raster(city_ndvi, flname ) # save raster
+#         df <- city_to_df(city_ndvi, 'waterclass')
+#         if (firstfl){
+#           city_ndvi_df <- df
+#           first <- FALSE }
+#         else
+#           city_ndvi_df <- rbind(city_ndvi_df, df)
+#     
+#     
+#         # city_ndvi <- terra::crop(  ndvi, city_sf)
+#         # save_raster(city_daynight, "ndvi") # save raster
+#         # 
+#         # print(city_daynight )
+#         # city_ndvi_df <- city_to_df(city_ndvi, 'ndvi')
+#         # head(city_ndvi_df)
+#         mean_ndvi <- city_meanval( city_ndvi_df )  
+#       }
+#     }
+#   }
+
+# 
+#     if (1 > 1){ #(ndviprocess){   # Using spat raster instead
+#       city_ndvi <- terra::crop(  ndvi_list, city_sf)
+#       save_raster(city_daynight, "ndvi", cty_raster) # save raster
+#   
+#       print(city_daynight )
+#       city_ndvi_df <- city_to_df(city_ndvi, 'ndvi')
+#       head(city_ndvi_df)
+#       mean_ndvi <- city_meanval( city_ndvi_df )  
+#       
+#       #fls <- ndvicsv[ndvicsv$city == city_name, ]
+#       #flscount <- nrow(fls)
+#       #firstfl = TRUE
+#       #for (i in 1:nrow(fls)){ #(surfacewater_raster in surfacewater_list)
+#       
+#         #rst <- fls$ndvi_file_name
+#         #if (len(rst) > 0){
+#           #nrast = concats('SurfaceWater_2018_30m_30_',as.character(rst-1))
+#         
+#           # ndvi_raster <- terra::rast[rst]
+#           # city_ndvi <- terra::crop( ndvi_raster, city_sf)
+#           # flname = "NDVI"
+#           # #if (flscount > 0)
+#           # #  flname = "ndvi_"+as.character(i)
+#           # save_raster(city_ndvi, flname ) # save raster
+#           # df <- city_to_df(city_ndvi, 'waterclass')
+#           # if (firstfl){
+#           #   city_ndvi_df <- df
+#           #   first <- FALSE }
+#           # else
+#           #   city_ndvi_df <- rbind(city_ndvi_df, df)
+#           # mean_ndvi <- city_meanval( city_ndvi_df )  
+#      
+#       #   }
+#       # }
+#     }
 
 
+    # if (FALSE){   #(s_water_process){  
+    #   swfile = FALSE
+    #   
+    #   fls <- swatercsv[swatercsv$city == city_name, ]
+    #   flscount <- nrow(fls)
+    #   firstfl = TRUE
+    #   for (i in 1:nrow(fls)){ #(surfacewater_raster in surfacewater_list)
+    #     rst <- fls$SurfaceFile
+    #     if (rst > 0){
+    #       srast = concats('SurfaceWater_2018_30m_30_',as.character(rst-1))
+    #     
+    #       surfacewater_raster <- terra::rast[surfacewater_list[srast]]
+    #       city_surfacewater <- terra::crop( surfacewater_raster, city_sf)
+    #       flname = "surfacewater"
+    #       if (flscount > 0)
+    #         flname = "surfacewater_"+as.character(i)
+    #       save_raster(city_surfacewater, flname , cty_raster) # save raster
+    #       df <- city_to_df(city_surfacewater, 'waterclass')
+    #       if (firstfl){
+    #         city_surfacewater_df <- df
+    #         first <- FALSE }
+    #       else
+    #         city_surfacewater_df <- rbind(city_surfacewater_df, df)
+    #       
+    #       mean_SWATER <- city_meanval( city_surfacewater_df )  
+    #       meansurfacewater <-0    
+    #       if (swfile == TRUE)
+    #         print(city_surfacewater )
+    #         #city_surfacewater_df <- city_to_df(city_surfacewater, 'waterclass')
+    #         #head(city_surfacewater)
+    #         #meansurfacewater <- city_meanval(city_surfacewater_df)
+    #     }
+    #   }  
+    # }
+
+  # Process_NDVI1 <- function( csvfl, pctyname=""){
+  #   
+  #   #fls <- ndvicsv[ndvicsv$city == city_name, ]
+  #   #flscount <- nrow(fls)
+  #    
+  #   filteredcsv <- csvfl 
+  #   firstfl <- TRUE
+  #   
+  #   meanndvi <-0
+  #   ncnt<-0
+  #   errmsge <- ""
+  #   fcsv <- ""
+  #   splitcount <- sum(filteredcsv[,2]  == pctyname)      
+  #   meancount <- count(AllvarMean)
+  # 
+  #   for (rw in rownames(filteredcsv) ){
+  #     if (length(pctyname) >0 ){
+  #       if (!(filteredcsv[rw,2]  == pctyname))
+  #         next
+  #     }
+  #     else
+  #     {
+  #       currct <- filteredcsv[rw,2]
+  #     }
+  #     mean_ndvi <-0
+  #      
+  #     # if (pctyname=="Alice Springs")
+  #     # {
+  #     #   print( paste0('recc', pctyname))
+  #     #   print( splitcount )
+  #     #   print( filteredcsv[rw,4] )
+  #     #   if (firstfl )
+  #     #     fcsv <- filteredcsv[rw,4]
+  #     #   else
+  #     #     print(paste0('fcsv', fcsv, filteredcsv[rw,4], " ", ncnt) )
+  #     #     print(fcsv == filteredcsv[rw,4])
+  #     # }
+  # 
+  #     tif_flname <- filteredcsv[rw,4]
+  #     cty <- filteredcsv[rw,2]
+  #     cty2 <- as.character(filteredcsv[rw,2])   # Added as error during add row
+  # 
+  #     if (ncnt > n)
+  #       break
+  #     
+  #     ncnt <- ncnt+1
+  #     
+  #     # city_sf1 <- world_city_map %>%
+  #     # filter(name_conve %in%  cty )  # city_name)  #
+  #     city_sf1 <-city_sf   # Added to preserve original city name 
+  # 
+  #     if (firstfl){
+  #       tiffl <- tif_flname  # 'ndvi_file_name'] #ndvicsv$ndvi_file_name
+  # 
+  #       pathfl <- paste0(str_trim('../data/10_raw_Other_variables/NDVI/'),
+  #                        str_trim(tiffl), sep="")
+  #       ndvi_raster<- open_tif( pathfl , TRUE)
+  #       
+  #     }
+  #     else
+  #       if (tiffl != tif_flname ){
+  #         tiffl <- tif_flname
+  #         pathfl <- paste0(str_trim('../data/10_raw_Other_variables/NDVI/'),
+  #                         str_trim(tiffl) , sep="")
+  # 
+  #         ndvi_raster<- open_tif( pathfl , TRUE)
+  #         
+  # 
+  #       }
+  # 
+  #     chk = tryCatch({
+  #       
+  #       city_ndvi <- terra::crop(  ndvi_raster, city_sf1)
+  #       pfx = "ndvi"
+  #       if (ncnt > 1)
+  #         pfx= paste0("ndvi", as.character(ncnt))
+  #       save_raster(city_ndvi, pfx , cty) # save raster
+  # 
+  #       city_ndvi_df <- city_to_df(city_ndvi, 'ndvi')
+  # 
+  #       if (splitcount> 1){
+  #         if (firstfl){
+  #           city_ndvi_df0 <- city_ndvi_df 
+  #           # dfcnt <- count(city_ndvi_df )
+  #           # print('rec1')
+  #           # print(dfcnt)
+  #           firstfl <- FALSE
+  #         }
+  #         else
+  #         {
+  #           # dfcnt <- count(city_ndvi_df )
+  #           # print('rec2 Before merge')
+  #           # print(dfcnt)
+  #           city_ndvi_df2 <-  rbind(city_ndvi_df0, city_ndvi_df)
+  #           city_ndvi_df0 <- city_ndvi_df2
+  #           city_ndvi_df  <- city_ndvi_df2
+  #           # dfcnt <- count(city_ndvi_df )
+  #           # print('rec2')
+  #           # print(dfcnt)
+  #         }
+  #         if (ncnt == splitcount)
+  #           {
+  #           dfcnt <- count(city_ndvi_df )
+  #           print('Total Records in dataframe')
+  #           print(dfcnt)
+  #           }
+  #       }
+  #       
+  #       if (ncnt == splitcount){
+  #         head(city_ndvi_df)
+  #         mean_ndvi <- city_meanval( city_ndvi_df )
+  #       }
+  #       
+  #     }, error = function(e){ 
+  #       mean_ndvi <- -999999999
+  #       firstfl <- FALSE
+  #       print( paste0("Cannot crop city ", pctyname ))
+  #       errmsge <- paste0("cannot crop NDVI ", pctyname, tiffl)
+  #       Allerror <- Allerror %>%
+  #         add_row( city = cty2,
+  #                  variabl = paste("NDVI", tiffl)
+  #                  )
+  #       return(-999999999)
+  #       })
+  #     
+  #     
+  #     apprec = (counter==0) 
+  #     if (splitcount == ncnt){
+  #       # print('AllvarMean')
+  #       # head(AllvarMean)
+  #       AllvarMean <- AllvarMean %>%
+  #         add_row( city = cty2,
+  #                  mean_ndvi = as.numeric(mean_ndvi),
+  #                  err = errmsge
+  #                  )
+  #       #print(AllvarMean)
+  # 
+  #       nextfivefl <- as.character(nextfive)
+  #       # Save the data frame to a CSV file
+  # 
+  #       write.csv(AllvarMean, paste0(
+  #         "../data/11_Output_R/Citywise Mean NDVI",nextfivefl,".csv", sep=""),
+  #         row.names = FALSE) # , append=TRUE)
+  #     }
+  #     firstfl <- FALSE
+  #   }
+  # return( mean_ndvi)
+  # }
 
 ```
 
