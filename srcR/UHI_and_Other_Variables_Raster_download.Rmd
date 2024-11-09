@@ -474,7 +474,7 @@ check = tryCatch({
           add_row( city = cty2,
                    variabl = paste(variable_name, tiffl)
                    )
-        return(-999999999)
+        return(mean_value)
         })
       
       
@@ -516,9 +516,9 @@ check = tryCatch({
   }
   
   start.time <- Sys.time()
-  nextfive <-0  #28
+  nextfive <- 10  #28
   counter <- 0
-  steps <- 5 #300
+  steps <- 600 #300
   
   ctystart <- (nextfive* steps)
   ctyend <- (ctystart+ steps )
@@ -571,8 +571,12 @@ check = tryCatch({
   # %>% filter(  city %in% ctylist)
   #print('ndvicsv')
   #print( ndvicsv)  
+  city_skip_list <- list('Bathurst1', 'Bathurst2', 'DamanhÌÈr', 'DÌùsseldorf', 'JaÌ©n', 
+                         'LÌùderitz', 'MÌùnster', 'Cadiz1', 'Cadiz2', 'Newcastle',
+                         'Ciudad JuÌÁrez', 'OsnabrÌùck', 'PiraiÌ©vs', 'Saint GeorgeÛªs',
+                         'San SebastiÌÁn', 'St. JohnÛªs', 'Ypacarai|Ita')
   for (city_name in city_names_list) {
-    if (counter< ctystart ){
+    if ((counter< ctystart) || (city_name %in% city_skip_list) ){
       counter <- counter +1
       next
     }
@@ -617,10 +621,12 @@ check = tryCatch({
       errmsge <-""
       meansurfacewater<-  Process_other_variable( swatercsv,  city_name, 'SWATER'  ) 
 
-      if (meansurfacewater==-999999999)
-      {
-        meansurfacewater<- 0
-        errmsg <- paste0("Error in ",city_name)
+      if (!is.na(meansurfacewater)){
+        if ((meansurfacewater == -999999999))
+          {
+          meansurfacewater<- 0
+          errmsge <- paste0("Error in ",city_name)
+        }
       }
       AllMeanSwater <- AllMeanSwater %>%
         add_row( city = city_name ,
@@ -651,10 +657,12 @@ check = tryCatch({
       errmsge <-""
       meanndvi<-  Process_other_variable( ndvicsv,  city_name, 'NDVI'  ) 
       # Process_NDVI( ndvicsv,  city_name    ) #currctylist )
-      if (meanndvi==-999999999)
-      {
-        meanndvi<- 0
-        errmsg <- paste0("Error in ",city_name)
+      if (!is.na(meanndvi)){
+        if ((meanndvi == -999999999 ))
+          {
+          meanndvi<- 0
+          errmsg <- paste0("Error in ",city_name)
+          }
       }
       AllvarMean <- AllvarMean %>%
         add_row( city = city_name ,

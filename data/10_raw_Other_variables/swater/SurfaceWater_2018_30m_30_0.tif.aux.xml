@@ -1,0 +1,13 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>waterClass</Description>
+    <Metadata>
+      <MDI key="STATISTICS_APPROXIMATE">YES</MDI>
+      <MDI key="STATISTICS_MINIMUM">1</MDI>
+      <MDI key="STATISTICS_MAXIMUM">3</MDI>
+      <MDI key="STATISTICS_MEAN">2.5955583462771</MDI>
+      <MDI key="STATISTICS_STDDEV">0.52821020069555</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">8.748</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>
