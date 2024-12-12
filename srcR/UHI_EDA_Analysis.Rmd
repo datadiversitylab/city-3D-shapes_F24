@@ -22,7 +22,12 @@ pacman::p_load(tidyverse,
                ggrepel,
                sf,
                terra,
-               raster)
+               raster,
+               tidyr,
+               ggpubr,
+               dplyr,
+               GGally,
+               corrgram)
 
 # libs <- c(
 #     "tidyverse", "sf", "geodata",
@@ -92,14 +97,12 @@ cty_shp <- cty |>
 
 cty_sf <- st_as_sf(cty_shp, coords = c("longitude", "latitude"), crs = 4326)    
     
-#cty_shape
-
 
 ```
 
 ## Maps
 
-```{r World map, echo=FALSE}
+```{r Display city shapes on world map, echo=FALSE}
 
 #| fig-width: 15
 #| fig-height: 15
@@ -113,7 +116,8 @@ ggplot(data = world) +
   geom_sf(data = cty_sf, aes(geometry = geometry), size=3, color='navy') +  
   geom_text(data = cty_sf, aes(x = lon, y = lat, label= shape_emoji, color=shape_color ), 
             show.legend = TRUE , na.rm=TRUE)+
-  scale_color_manual( "shape_color",
+  scale_color_manual( labels= c("⌛ Hourglass" , "Inverse Pyramid" , "▼️ Inverse Pyramid" ,  
+                                "▲ Pyramid" ,  "♦ Diamond" ,"  Unknown"),
                      values = c("#CC0000","yellow","cyan",
                                 "magenta","green","white"), 
                         )  +
@@ -121,40 +125,16 @@ ggplot(data = world) +
        subtitle = "Based on building height distribution")+ 
        xlab("")+ ylab("") +
   theme_minimal()+
-  theme(legend.position = "right",
+  theme(legend.position = "top",
+        legend.text=element_text(size=20, color= "darkgreen"  ),
         panel.border = element_rect(colour = "black", fill = NA),
         panel.background = element_rect(fill = "azure"),
-        text = element_text(size = 12) ,
+        text = element_text(size = 20) ,
         plot.title = element_text(size = 25),
         plot.subtitle = element_text(size = 20),
         
         )
-
-
-    # scale_color_manual( "shape_color",
-    #                  values = c("Hourglass"="#CC0000", "Pyramid"="yellow","Diamond"="cyan",
-    #                             "Inverse Pyramid"="magenta","unknown"="green", "NA"="white"), 
-    #                  labels = emj   )  +
-  # theme_bw() +
-  # theme(legend.position = "right",
-  #       axis.title = element_blank(),
-  #       axis.text = element_blank(),
-  #       panel.grid = element_blank(),
-  #       panel.border = element_rect(colour = "black", fill = NA),
-  #       panel.background = element_rect(fill = "azure"),
-  #       text = element_text(size = 1) ,
-  #       plot.title = element_text(size = 5),
-  #       plot.subtitle = element_text(size = 5)
-  #       )
-
-
-#  theme_minimal()+
-                     #values = c("Hourglass"="#CC0000", "Inverse Pyramid"="cyan",
-                    #            "Pyramid"="yellow", "Diamond"="magenta","green")+
-#  coord_fixed( ratio=5000) +   
-#geom_text(aes(label= c(cty_shape$City," ",cty_shape$shape_emoji) ) ,
-#  geom_text(data = cty_sf, aes(x = lon, y = lat, label= shape_emoji ,  color= mean_uhi_DayNight))+
-
+ggsave("../data/11_Output_R/CityShapesInWordMap.png")
 
 ```
 
@@ -174,107 +154,294 @@ ggplot(data = world) +
 ```
 
 ```{r echo = FALSE}
-# ggplot(data = cty_sf, aes(x=Class, y=mean_ndvi , fill= Class)) +
-#   geom_boxplot()+
-#   theme_minimal()+
-#   labs(title = "City Shape wise NDVI distribution " )+
-#   xlab("City Shape")+
-#   ylab("Mean NDVI")+
-#   theme(legend.position = "none",
-#         panel.grid = element_blank(),
-#         panel.border = element_rect(colour = "black", fill = NA),
-#         panel.background = element_rect(fill = "azure"),
-#         text = element_text(size = 10) ,
-#         plot.title = element_text(size = 10),
-#         plot.subtitle = element_text(size = 10)
-#         )
-# 
-# ggplot(data = cty_sf, aes(x=Class, y=mean_surface_water , fill= Class)) +
-#   geom_boxplot()+
-#   theme_minimal()+
-#   xlab("City Shape")+
-#   ylab("Mean surface water")+
-#   theme(legend.position = "none",
-#         panel.grid = element_blank(),
-#         panel.border = element_rect(colour = "black", fill = NA),
-#         panel.background = element_rect(fill = "azure"),
-#         text = element_text(size = 10) ,
-#         plot.title = element_text(size = 10),
-#         plot.subtitle = element_text(size = 10)
-#         )
-  
-```
-
-```{r}
 
 ```
 
-```{r}
-
-```
  
 ```{r echo = FALSE}
 #cty_sf_long <- melt(cty_sf) 
 head(cty_sf)
 meanval1 <- cty_sf %>% 
   mutate( var1='NDVI ',
-          mean=mean_ndvi, Shape=Class) 
+          Mean=mean_ndvi, Shape=Class) 
 
 meanval2 <- cty_sf %>% 
   mutate( var1='Surface Water (No water/Seasonal/permanent water)',
-          mean=mean_surface_water, Shape=Class) 
+          Mean=mean_surface_water, Shape=Class) 
   
 meanval3 <- cty_sf %>% 
   mutate( var1='Both Day and Night UHI (°C)',
-          mean=mean_uhi_DayNight, Shape=Class)
+          Mean=mean_uhi_DayNight, Shape=Class)
 meanval4 <- cty_sf %>% 
   mutate( var1=' Daytime UHI (°C)',
-          mean=mean_uhi_daytime, Shape=Class) 
+          Mean=mean_uhi_daytime, Shape=Class) 
 meanval5 <- cty_sf %>% 
   mutate( var1=' Nighttime UHI (°C)',
-          mean=mean_uhi_Nighttime, Shape=Class)
+          Mean=mean_uhi_Nighttime, Shape=Class)
 meanval_1_2 <- union_all(meanval1,meanval2)
 meanval_4_5 <- union_all(meanval4, meanval5)
 meanval_3_4_5 <- union_all(meanval3, meanval_4_5)
 meanval <- union_all(meanval_3_4_5, meanval_1_2)
-#head(meanval)
 
+meanval <- meanval %>% drop_na()
+
+meanval <- meanval %>% arrange( var1, Mean)
+
+meanval_log <- meanval %>% 
+   mutate( logMean = case_when( 
+      Mean > 0  ~log10(Mean),
+      Mean < 0  ~ -1*log10(-1*Mean),      
+      TRUE ~ 0 ))
+
+#head(meanval_log)
+
+
+meanval_sum <- meanval %>% 
+  group_by(var1, Shape) %>%
+  summarize(Meanvar=mean(Mean))
+
+meanval_log_sum <- meanval_log %>% 
+  group_by(var1, Shape) %>%
+  summarize(Meanvar=mean(logMean))
+
+
+head(meanval_sum)
 
 ```
 
 ```{r echo = FALSE}
 
-# ggplot(data = meanval_1_2, aes(x=Shape, y=mean , group=interaction(Shape,var1), color= 'black', fill= var1)) +
-#   geom_boxplot()+
-#   theme_minimal()+
-#   xlab("City Shape")+
-#   ylab("Mean ")+
-#   facet_grid(. ~ var1)+
-#   theme(legend.position = "none",
-#         panel.grid = element_blank(),
-#         panel.border = element_rect(colour = "black", fill = NA),
-#         panel.background = element_rect(fill = "azure"),
-#         text = element_text(size = 10) ,
-#         plot.title = element_text(size = 20),
-#         plot.subtitle = element_text(size = 10)
-#         )
 
-ggplot(data = meanval, aes(x=Shape, y=mean , group=interaction(Shape,var1),  fill=var1)) +
+#Boxplots of variables UHI, NDVI, Surface water
+ggplot(data = meanval_log, aes(x=Shape, y=logMean , group=interaction(Shape,var1),  fill=var1)) +
   geom_boxplot()+
   theme_minimal()+
+  labs(title = "Boxplot of UHI, NDVI, Surface water mean values " , 
+       subtitle = "Based on city shapes")+   
   xlab("City Shape")+
-  ylab("Mean ")+
+  ylab("Log Mean ")+
   facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
   theme(legend.position = "none",
         panel.grid = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA),
         panel.background = element_rect(fill = "azure"),
-        text = element_text(size = 10) ,
-        plot.title = element_text(size = 20),
-        plot.subtitle = element_text(size = 10)
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
         )  # _3_4_5
 
+ggsave("../data/11_Output_R/BoxPlotsOfVariables.png")
+
 ```
+
+```{r}
+#Violin plots of variables UHI, NDVI, Surface water
+ggplot(data = meanval_log, aes(x=Shape, y=logMean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_violin()+
+  theme_minimal()+
+  labs(title = "Violin plot of UHI, NDVI, Surface water mean values " , 
+       subtitle = "Based on city shapes")+   
+  xlab("City Shape")+
+  ylab("Log Mean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  # _3_4_5
+
+ggsave("../data/11_Output_R/ViolinPlotsOfVariablesLog.png")
+
+```
+
+
+
+```{r}
+
+
+library("ggpubr")
+#       order = c("ctrl", "trt1", "trt2"), 
+
+m1_sum <- meanval_sum %>% 
+  filter( var1=='Both Day and Night UHI (°C)')
+
+m1 <- meanval %>% 
+  filter( var1=='Both Day and Night UHI (°C)')
+msel <- dplyr::select(m1, Shape, Mean)
+
+ggline(msel, x = "Shape", y = "Mean",
+       order = c("Diamond", "Hourglass", "Pyramid"), 
+       add= "mean_se", group = 1,
+       ylab = "Mean", xlab = "City Shape")+
+  geom_line(data = m1_sum , aes(x=Shape, y=Meanvar, group=1))+
+  labs(title = "Anova plot of UHI Day and Night value " , 
+       subtitle = "Based on city shapes")
+
+
+ggsave("../data/11_Output_R/Anova.png")
+
+
+
+```
+
+
+```{r}
+res.aov <- aov(Mean ~ Shape, data = msel)
+# Summary of the analysis
+summary(res.aov)
+```
+```{r}
+kruskal.test(Mean ~ Shape, data = msel)
+
+pairwise.wilcox.test(msel$Mean, msel$Shape,
+                 p.adjust.method = "BH")
+```
+```{r}
+m2_sum <- meanval_sum %>% 
+  filter( var1==' Daytime UHI (°C)')
+
+m2 <- meanval %>% 
+  filter( var1==' Daytime UHI (°C)')
+msel2 <- dplyr::select(m2, Shape, Mean)
+
+ggline(msel2, x = "Shape", y = "Mean",
+       order = c("Diamond", "Hourglass", "Pyramid"), 
+       add= "mean_se", group = 1,
+       ylab = "Mean", xlab = "City Shape")+
+  geom_line(data = m2_sum , aes(x=Shape, y=Meanvar, group=1))+
+  labs(title = "Anova plot of UHI Day value " , 
+       subtitle = "Based on city shapes")
+
+
+ggsave("../data/11_Output_R/AnovaDay.png")
+
+res.aov <- aov(Mean ~ Shape, data = msel2)
+# Summary of the analysis
+summary(res.aov)
+
+kruskal.test(Mean ~ Shape, data = msel2)
+
+pairwise.wilcox.test(msel$Mean, msel$Shape,
+                 p.adjust.method = "BH")
+
+```
+
+```{r}
+m3_sum <- meanval_sum %>% 
+  filter( var1==' Nighttime UHI (°C)')
+
+m3 <- meanval %>% 
+  filter( var1==' Nighttime UHI (°C)')
+msel3 <- dplyr::select(m3, Shape, Mean)
+
+ggline(msel3, x = "Shape", y = "Mean",
+       order = c("Diamond", "Hourglass", "Pyramid"), 
+       add= "mean_se", group = 1,
+       ylab = "Mean", xlab = "City Shape")+
+  geom_line(data = m3_sum , aes(x=Shape, y=Meanvar, group=1))+
+  labs(title = "Anova plot of UHI Day value " , 
+       subtitle = "Based on city shapes")
+
+
+ggsave("../data/11_Output_R/AnovaNight.png")
+
+res.aov <- aov(Mean ~ Shape, data = msel2)
+# Summary of the analysis
+summary(res.aov)
+
+kruskal.test(Mean ~ Shape, data = msel2)
+
+pairwise.wilcox.test(msel$Mean, msel$Shape,
+                 p.adjust.method = "BH")
+
+```
+```{r}
+
+library(GGally)
+library(dplyr)
+
+corval <- cty_sf  |>
+  mutate( 
+    Shape = case_when( Class == "Diamond"  ~ 1,
+                       Class == "Hourglass"  ~ 2  ,
+                       Class == "Pyramid" ~  3,
+                       Class == "Inverse Pyramid"  ~  4,    
+                       TRUE  ~  0 )
+    )
+      
+corval <- dplyr::select(corval,'mean_uhi_DayNight', 'mean_uhi_daytime', 
+                        'mean_uhi_Nighttime', 'mean_ndvi' , 'mean_surface_water',
+                        'Shape' )
+corval <- corval %>% drop_na() 
+
+
+ggpairs(  corval, columns=c('mean_uhi_DayNight', 'mean_uhi_daytime', 
+                            'mean_uhi_Nighttime', 'mean_ndvi' , 'mean_surface_water', 'Shape'))
+
+#ggpairs(  cty_sf, columns=c('mean_uhi_DayNight', 'Class', 'mean_ndvi' , 'mean_surface_water')
+#)
+
+ggsave("../data/11_Output_R/pairsDayNight.png")
+
+ggpairs(  corval, columns=c('mean_uhi_DayNight', 'Shape'))
+
+#ggpairs(  cty_sf, columns=c('mean_uhi_DayNight', 'Class', 'mean_ndvi' , 'mean_surface_water')
+#)
+
+ggsave("../data/11_Output_R/pairs.png")
+
+
+corval <- dplyr::select(corval,'mean_uhi_DayNight', 'mean_uhi_daytime', 
+                        'mean_uhi_Nighttime', 'mean_ndvi' , 'mean_surface_water',
+                        'Shape')
+corval <- corval %>% dplyr::select(-geometry)
+corval <- corval %>% 
+  mutate( Shp = Shape
+    )
+corval2 <- st_drop_geometry(corval)
+#cormsel = subset(cormsel, select = -c(Shape,geometry) )
+corval2 <- corval2 %>% dplyr::select(-Shape)  # geometry)
+
+
+cormsel1 <- msel %>% dplyr::select(-geometry)
+#cormsel1 = subset(cormsel1, dplyr::select = c(Shape,Mean) ) 
+cormsel1 <- cormsel1 %>% 
+  mutate( 
+    Shp = case_when( Shape == "Diamond"  ~ 1,
+                       Shape == "Hourglass"  ~ 2  ,
+                       Shape == "Pyramid" ~  3,
+                       Shape == "Inverse Pyramid"  ~  4,    
+                       TRUE  ~  0 )
+    )
+
+cormsel2 <- st_drop_geometry(cormsel1)
+#cormsel = subset(cormsel, select = -c(Shape,geometry) )
+cormsel2 <- cormsel2 %>% dplyr::select(-Shape)  # geometry)
+cormsel2 = subset(cormsel2, select = c(Shp, Mean) ) 
+head(cormsel2)
+#ggpairs(  cormsel, columns=c('Mean', 'Shp') )
+#ggsave("../data/11_Output_R/pairsDayNight_Shape.png")
+
+```
+```{r}
+library("corrgram")
+#head(corval)
+#vars2 <- c("mean_uhi_daytime","mean_uhi_Nighttime","mean_ndvi", "mean_surface_water")
+vars2 <- c("Shp","Mean")
+corrgram( cormsel2,  main="UHI and City Shape")
+ggsave("../data/11_Output_R/Corrgram_uhi_city.png")
+corrgram( corval2,  main="UHI and all other variables")
+ggsave("../data/11_Output_R/Corrgram_uhi_all_variables.png")
+
+
+```
+
+
 ```{r echo = FALSE}
 terraOptions(verbose=TRUE)
 library(terra)
@@ -432,6 +599,7 @@ ameanval1<- subset(aalborg1,select=-c(NDVI_mean))
         text = element_text(size = 10) ,
         plot.title = element_text(size = 20),
         plot.subtitle = element_text(size = 20))
+ggsave("../data/11_Output_R/Aalborg_UHI_Day_plot.png")    
 
   ggplot(data = uhi ,
          aes(x = x, y = y,  fill=Aalborg_uhi_2)) +
@@ -446,6 +614,7 @@ ameanval1<- subset(aalborg1,select=-c(NDVI_mean))
           text = element_text(size = 10) ,
           plot.title = element_text(size = 20),
           plot.subtitle = element_text(size = 20))
+  ggsave("../data/11_Output_R/Aalborg_UHI_Night_plot.png")    
 
   ggplot(data = uhi ,
          aes(x = x, y = y,  fill=daynight)) +
@@ -460,6 +629,7 @@ ameanval1<- subset(aalborg1,select=-c(NDVI_mean))
           text = element_text(size = 10) ,
           plot.title = element_text(size = 20),
           plot.subtitle = element_text(size = 20))
+ggsave("../data/11_Output_R/Aalborg_UHI_DayNight_plot.png")    
       
   ggplot(data = ndvi ,
          aes(x = x, y = y,  fill=NDVI_mean)) +
@@ -474,11 +644,12 @@ ameanval1<- subset(aalborg1,select=-c(NDVI_mean))
           text = element_text(size = 10) ,
           plot.title = element_text(size = 20),
           plot.subtitle = element_text(size = 20))
+  ggsave("../data/11_Output_R/Aalborg_NDVI_plot.png")  
 
   ggplot(data = swater ,
          aes(x = x, y = y,   fill=waterClass)) +
     geom_tile() +
-    scale_fill_gradient( "waterClass",low = "brown", high = "navy")+    
+    scale_fill_gradient( "waterClass",low = "skyblue", high = "navy")+    
     labs(title = "Day time UHI", subtitle = "for city Aalborg")+    
     coord_equal()+ guides(fill=guide_legend(title="Surface Water"))+
     theme(legend.position = "right",
@@ -489,30 +660,65 @@ ameanval1<- subset(aalborg1,select=-c(NDVI_mean))
           plot.title = element_text(size = 20),
           plot.subtitle = element_text(size = 20))
   
-  # ggplot(data = ameanval1 ,
-  #        aes(x = x, y = y,  fill=mean)) +
-  #   geom_tile() + 
-  #   xlab("Aalborg City")+
-  #   ylab("NDVI Mean ")
-  # 
-  # ggplot(data = ameanval2 ,
-  #        aes(x = x, y = y,  fill=mean)) +
-  #   geom_tile() + 
-  #   xlab("Aalborg City")+
-  #   ylab("Surface water Mean ")  
-  
-  
-  #facet_wrap(. ~ var1 , scales = "free", nrow = 1)+
-  # +
-  #   theme(legend.position = "none",
-  #         panel.grid = element_blank(),
-  #         panel.border = element_rect(colour = "black", fill = NA),
-  #         panel.background = element_rect(fill = "azure"),
-  #         text = element_text(size = 10) ,
-  #         plot.title = element_text(size = 20),
-  #         plot.subtitle = element_text(size = 10)
-  #         )  # _3_4_5
+ggsave("../data/11_Output_R/Aalborg_surface_water_plot.png")  
+```
 
-    #      scale_fill_gradient( low = "yellow", high = "red")+
+```{r}
+
+# Not Used
+
+
+#Boxplots of variables UHI, NDVI, Surface water
+ggplot(data = meanval, aes(x=Shape, y=Mean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_boxplot( width =0 )+
+  stat_boxplot(geom = "errorbar") +
+  geom_point(data = meanval_sum , aes(x=Shape, y=Meanvar, size=2))+
+  geom_line(data = meanval_sum , aes(x=Shape, y=Meanvar, group=var1))+
+  theme_minimal()+
+  labs(title = "Boxplot of UHI, NDVI, Surface water global mean values " , 
+       subtitle = "Based on city shapes")+ 
+  xlab("City Shape")+
+  ylab("Mean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  # _3_4_5
+
+ggsave("../data/11_Output_R/BoxPlotsErrorbarOfVariables.png")
+
+
+#Boxplots of variables UHI, NDVI, Surface water log values
+ggplot(data = meanval_log, aes(x=Shape, y=logMean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_boxplot( width =0 )+
+  stat_boxplot(geom = "errorbar") +
+  geom_point(data = meanval_log_sum , aes(x=Shape, y=Meanvar, size=2))+
+  geom_line(data = meanval_log_sum , aes(x=Shape, y=Meanvar, group=var1))+
+  theme_minimal()+
+  labs(title = "Boxplot of UHI, NDVI, Surface water global log mean values " , 
+       subtitle = "Based on city shapes")+ 
+  xlab("City Shape")+
+  ylab("LogMean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  # _3_4_5
+
+ggsave("../data/11_Output_R/BoxPlotsErrorbarOfVariables_log.png")
+
+
+
+
 ```
 
