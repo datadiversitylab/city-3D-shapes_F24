@@ -27,13 +27,6 @@ libs <- c(
     "raster", "tibble", "readr"
 )
 
-#libs <- c(
-#    "tidyverse", "sf", "geodata",
-#    "terra", "classInt", "rayshader", "dplyr", "utils", 
-#    "stars", "raster", "giscoR", "tidyterra", "plotly", "gridExtra", "e1071", 
-#    "diptest", "xtable", "ggplot"
-#)
-
 installed_libs <- libs %in% rownames(
     installed.packages()
 )
@@ -170,8 +163,6 @@ s_water_process <- TRUE # FALSE  #
 
 uhi <- open_tif("../data/10_raw_Other_variables/UHI_yearly_pixel_2018.tif") 
 
-# sfiles <- list.files("../data/10_raw_Other_variables/", pattern = "*.tif$", full.names = FALSE)
-
 surfacewater_list <- list()
 if (s_water_process){
   sfiles <- list.files("../data/10_raw_Other_variables/", pattern = ".tif$",
@@ -194,22 +185,10 @@ if (ndviprocess){
 uhi
 uhi_day <- uhi[["Daytime"]]
 uhi_night <- uhi[["Nightime"]]
-#uhi_combined <- uhi_day + uhi_night
 
 uhi_day
 uhi_night
-#uhi_combined
 
-#, b = 3,         
-#plotRGB( uhi)  #, 3,2,1) #,
-        #r = 3, g = 4, b = 3,
-        #scale = 800,
-        #stretch = "hist")
-
-  #ggplot() +
-  #  geom_raster(data = uhi_df,
-  #              aes(x = x, y = y, alpha = Daytime)) + 
-  #  coord_equal()
 }, error = function(e){
   unlink(tempdir(), recursive = TRUE) 
   gc()
@@ -232,20 +211,6 @@ check = tryCatch({
     
     city_variable <- terra::crop(  tif_raster, city_sf)
     
-    # crop city height from building_h object
-    #city_variable <- terra::crop(
-    #  tif_raster,
-    #  #convert to terra friendly format
-    #  terra::vect(city_sf), 
-    #  # crop the inside
-    #  snap = "in", 
-    #  # remove everything except city_sf
-    #  mask = T
-    #)
-    
-    # Set a timeout of 5 seconds 
-    #options(timeout = 15)
-    
   }
       
   city_mean <- function(city_variable){  
@@ -258,11 +223,11 @@ check = tryCatch({
   city_meanval <- function(city_variable ){
     mean_df <- colMeans(city_variable, na.rm = TRUE)
     totcol <- ncol( city_variable)
-    #print(totcol)
+
     meancolvalue <- mean_df[totcol][1] # colmn]  #Daytime]
-    #meancolvalue <-0
+
     print( paste0('Mean ', as.character(meancolvalue)) )
-    #print(mean_df)
+
     return(meancolvalue)
   }
       
@@ -304,16 +269,11 @@ check = tryCatch({
     # Write the raster to a GeoTIFF file
     writeRaster(city_variable, filename = output_file, overwrite = TRUE)
     
-    # Set a timeout of 5 seconds 
-    #options(timeout = 5)
-    
+
   }
   
   Process_other_variable <- function( csvfl, pctyname="", variable_name='S_WATER'){
     
-    #fls <- ndvicsv[ndvicsv$city == city_name, ]
-    #flscount <- nrow(fls)
-     
     filteredcsv <- csvfl 
     firstfl <- TRUE
     
@@ -344,12 +304,10 @@ check = tryCatch({
       
       ncnt <- ncnt+1
       
-      # city_sf1 <- world_city_map %>%
-      # filter(name_conve %in%  cty )  # city_name)  #
       city_sf1 <-city_sf   # Added to preserve original city name 
 
       if (firstfl){
-        tiffl <- tif_flname  # 'ndvi_file_name'] #ndvicsv$ndvi_file_name
+        tiffl <- tif_flname  
 
         pathfl <- paste0(str_trim('../data/10_raw_Other_variables/'),variable_name,'/',
                          str_trim(tiffl), sep="")
@@ -380,9 +338,7 @@ check = tryCatch({
         if (splitcount> 1){
           if (firstfl){
             city_othvar_df0 <- city_othvar_df 
-            # dfcnt <- count(city_othvar_df )
-            # print('rec1')
-            # print(dfcnt)
+            
             firstfl <- FALSE
           }
           else
@@ -487,25 +443,13 @@ check = tryCatch({
     variabl = character()
     )
   
-  #print(AllCityMeans)
+  
   
   Allctylst <-city_names_list
   currcty <- as.list(Allctylst[ctystart:ctyend])
-  # currctylist <- list()
-  # # 
-  # for (ccty in currcty){
-  #    lc <- length(currctylist)
-  #    currctylist[lc+1] <-ccty
-  # }
-  # print('citylists--')
-  # print(  currcty )
-  # print(currctylist)
 
   
-     
-  #ndvicsv <- ndvicsv[ndvicsv$city %in% currctylist, ] 
-  # %>% filter(  city %in% ctylist)
-
+# skipping cities due to error
   city_skip_list <- list('Bathurst1', 'Bathurst2', 'DamanhÌÈr', 'DÌùsseldorf', 'JaÌ©n', 
                          'LÌùderitz', 'MÌùnster', 'Cadiz1', 'Cadiz2', 'Newcastle',
                          'Ciudad JuÌÁrez', 'OsnabrÌùck', 'PiraiÌ©vs', 'Saint GeorgeÛªs',
@@ -602,7 +546,6 @@ check = tryCatch({
         "../data/11_Output_R/Citywise Mean NDVI",nextfivefl,".csv", sep=""),
         row.names = FALSE) #, append=TRUE)
       
-      #ndviprocess <- FALSE
       }  
     
     # Add a record to the dataframe
@@ -615,15 +558,12 @@ check = tryCatch({
       mean_uhi_daytime = meanDaytimeval,
       mean_uhi_Nighttime = meanNighttime
     )
-    #print(AllCityMeans)
+
     nextfivefl <- as.character(nextfive)
     # Save the data frame to a CSV file
     write.csv(AllCityMeans, paste("../data/11_Output_R/Citywise Means",nextfivefl,".csv"), 
               row.names = TRUE) #, append=TRUE)
-    #write.csv(AllCityMeans, "../data/11_Output_R/Citywise Means.csv", 
-    #          row.names = !file.exists("../data/11_Output_R/Citywise Means.csv"),
-    #          append=TRUE)
-  
+
     counter <- counter + 1
     if (counter >= n) {
       break  # Break the loop when counter reaches n
@@ -647,8 +587,3 @@ check = tryCatch({
 
 ```
 
-```{r - Not used now Open Files by chunk and convert to dataframe}
-
-```
-
-#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
