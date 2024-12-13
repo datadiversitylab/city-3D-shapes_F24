@@ -70,18 +70,16 @@ https://www.sciencedirect.com/science/article/abs/pii/B9780128207307000173#:~:te
 [4] David L. Chandler, Urban heat island effects depend on a city’s layout, Available at https://news.mit.edu/2018/urban-heat-island-effects-depend-city-layout-0222
 [5] City module - City cluster and urban heat islands (Europe), Available at 
 https://www.pik-potsdam.de/cigrasp-2/city-module/heat-island-cluster/index.html   
-[6] Nyuk Hien Wong, Chun Liang Tan, Dionysia Denia Kolokotsa & Hideki Takebayashi Available at https://www.nature.com/articles/s43017-020-00129-5  
+[6] Nyuk Hien Wong, Chun Liang Tan, Dionysia Denia Kolokotsa & Hideki Takebayashi Available at 
+https://www.nature.com/articles/s43017-020-00129-5  
 [7] Mackres, E., Pool, J. R., Shabou, S., Wong, T., Anderson, J., Gillespie, C., & Alexander, S. New Data Dashboard Helps Cities Build Urban Resilience in a Changing Climate. Available at
 https://www.wri.org/update/new-data-dashboard-shows-climate-change-risks-in-cities  
 [8] H. M. Fattah Capstone Report, Available at
 https://github.com/datadiversitylab/city-3D-shapes/tree/main/docs/Capstone_report_for_H_M_Abdul_Fattah.pdf 
-[9] Urban Heat Island dataset, 
-Various UHI datasets available at
+[9] Urban Heat Island dataset, Various UHI datasets available at
 https://developers.google.com/earth-engine/datasets/tags/uhi  or 
 Direct dataset download -
 https://sedac.ciesin.columbia.edu/data/set/sdei-yceo-sfc-uhi-v4/data-download
-Citation-
-Center for International Earth Science Information Network - CIESIN - Columbia University. 2018. Gridded Population of the World, Version 4.11 (GPWv4): Population Count, Revision 11. Palisades, NY: NASA Socioeconomic Data and Applications Center (SEDAC). https://doi.org/10.7927/H4JW8BX5. Accessed 10/15/2024
 [10] NOAA CDR AVHRR NDVI: Normalized Difference Vegetation Index, Version 5  dataset, available at
 MODIS Combined 16-Day NDVI  available at
 https://developers.google.com/earth-engine/datasets/catalog/MODIS_MCD43A4_006_NDVI 
@@ -89,7 +87,6 @@ https://developers.google.com/earth-engine/datasets/catalog/MODIS_MCD43A4_006_ND
 https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MCD18A1  
 [12] JRC Global Surface Water Mapping Layers, v1.4  dataset. Available at
 https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_4_YearlyHistory
-Citation- 'Source: EC JRC/Google'
 [13] GHSL - Global Human Settlement  Layer.  Available at
 https://human-settlement.emergency.copernicus.eu/datasets.php 
 (GHS-BUILT-H - R2023A dataset used for building height calculation)
@@ -104,6 +101,7 @@ https://www.sthda.com/english/wiki/one-way-anova-test-in-r
 https://www.sthda.com/english/wiki/kruskal-wallis-test-in-r 
 [18] Correlation matrix with ggally – the R Graph Gallery    Available at
 https://r-graph-gallery.com/199-correlation-matrix-with-ggally.html 
+
  
 
 ### Acknowledgment
