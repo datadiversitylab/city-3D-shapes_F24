@@ -79,9 +79,22 @@ List of programs and its purpose
 11. UHI_EDA_Analysis.Rmd
     R program used for analysis using Boxplots, Anova and Kruskal-Wallis test Also logistic regression ML model was used in a python program to explore relationship between UHI and city shape, NDVI, surface water
 
-Data Files 
+Data Files -
+
 Raw Data files are in data\10_raw_Other_variables folder 
-UHI .tif file (UHI_yearly_pixel_2018.tif) and NDVI .tif files from data\10_raw_Other_variables folder\NDVI folder are not added here due to large size. They are copied in nextcloud
+UHI .tif file (UHI_yearly_pixel_2018.tif) and NDVI .tif files from data\10_raw_Other_variables folder\NDVI folder are not added here due to large size.
+They are copied in nextcloud. Also raster files are copied to nextcloud
+
+CSV files accessed in program -
+
+City_NDVI_files.csv in data\10_raw_Other_variables folder
+City_surface.csv in data\10_raw_Other_variables folder
+combined_summary_City_Shape.csv in data\10_raw_Other_variables folder
+ML_input_data_coordinates.csv in data\12_Output_python folder
+UHI_NDVI_Swater_Means_data.csv in data\12_Output_python folder
+City_coordinates.csv in data\12_Output_python folder
+Citywise Means [0 -10].csv (11 files numbered 0 to 10) in data\11_Output_R folder
+
 
 # References
 
