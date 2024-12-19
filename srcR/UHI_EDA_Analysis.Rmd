@@ -164,6 +164,8 @@ meanval_4_5 <- union_all(meanval4, meanval5)
 meanval_3_4_5 <- union_all(meanval3, meanval_4_5)
 meanval <- union_all(meanval_3_4_5, meanval_1_2)
 
+meanval_na <- meanval   # Data without removing NAs
+
 meanval <- meanval %>% drop_na()
 
 meanval <- meanval %>% arrange( var1, Mean)
@@ -186,6 +188,92 @@ meanval_log_sum <- meanval_log %>%
 head(meanval_sum)
 
 ```
+```{r}
+
+
+meanval_na <- meanval_na %>% arrange( var1, Mean)
+
+meanval_na_log <- meanval_na %>% 
+   mutate( logMean = case_when( 
+      Mean > 0  ~log10(Mean),
+      Mean < 0  ~ -1*log10(-1*Mean),      
+      TRUE ~ 0 ))
+
+meanval_na_sum <- meanval_na %>% 
+  group_by(var1, Shape) %>%
+  summarize(Meanvar=mean(Mean))
+
+meanval_na_log_sum <- meanval_na_log %>% 
+  group_by(var1, Shape) %>%
+  summarize(Meanvar=mean(logMean))
+
+#Boxplots of variables UHI, NDVI, Surface water
+ggplot(data = meanval_na, aes(x=Shape, y=Mean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_boxplot()+
+  theme_minimal()+
+  labs(title = "Boxplot of UHI, NDVI, Surface water mean values " , 
+       subtitle = "Based on city shapes (including NA values)")+   
+  xlab("City Shape")+
+  ylab("Mean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  # _3_4_5
+
+ggsave("../data/11_Output_R/BoxPlotsOfVariables_na.png")
+
+#Boxplots of variables UHI, NDVI, Surface water using log means
+ggplot(data = meanval_na_log, aes(x=Shape, y=logMean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_boxplot()+
+  theme_minimal()+
+  labs(title = "Boxplot of UHI, NDVI, Surface water mean log values " , 
+       subtitle = "Based on city shapes(including NA values)")+   
+  xlab("City Shape")+
+  ylab("Log Mean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  # _3_4_5
+
+ggsave("../data/11_Output_R/BoxPlotsOfVariablesLog_na.png")
+
+#Violin plots of variables UHI, NDVI, Surface water using log means
+ggplot(data = meanval_na_log, aes(x=Shape, y=logMean , group=interaction(Shape,var1),  fill=var1)) +
+  geom_violin()+
+  theme_minimal()+
+  labs(title = "Violin plot of UHI, NDVI, Surface water mean log values " , 
+       subtitle = "Based on city shapes (Including NA values)")+   
+  xlab("City Shape")+
+  ylab("Log Mean ")+
+  facet_wrap(. ~ var1 , scales = "free", nrow = 2)+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_rect(fill = "azure"),
+        text = element_text(size = 15, face = "bold") ,
+        axis.text.x=element_text(angle=30),
+        plot.title = element_text(size = 25, face = "bold"),
+        plot.subtitle = element_text(size = 15, face = "bold")
+        )  
+
+ggsave("../data/11_Output_R/ViolinPlotsOfVariablesLog.png")
+
+
+
+```
+
 
 ```{r echo = FALSE}
 
