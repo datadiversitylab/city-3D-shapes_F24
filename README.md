@@ -60,6 +60,26 @@ This repo has the following basic structure.
 │
 ├── src_r                     <- R source code for use in this project.
 ```
+List of programs and its purpose
+1. Download_img_surfacewater_NDVIcsv.ipynb
+python program to download surface water data from Google earth engine as 6 tiles.
+
+2. UHI_and_Other_Variables_Raster_download.Rmd
+R program to reads all the data files and crops the data based on the shape file, calculates means of cities and merges NDVI, UHI, surface means into csv ‘Citywise Means [0-10].csv ’,‘Citywise Mean NDVI[0-10].csv ’, ‘Citywise Mean Surface water [0-10].csv ’	
+
+3. Download_img_surfacewater_NDVIcsv.ipynb
+NDVI and surface data is in the form of multiple tiles. So, a python program is written to determine the list of cities included in each tile and generate CSV containing this info. And in R program only the tile containing city is opened at a time in order to reduce memory usage.
+	
+4. Download_img_UHI_surfacewater_SolarRadiation_NDVI_coord.ipynb
+Python program  to get city geographical cordinates and save in City_coordinates.csv	
+
+5. Merge_all_mean_csv_and_ML_model_coordinates.ipynb
+Python program to merge Cityshape csv (‘../data/10_raw_Other_variables/combined_summary_City_Shape.csv’) created previously with this csv containing various means Also city coordinates information was added to this csv. A single file containing all means along with coordinates is created
+
+6. UHI_EDA_Analysis.Rmd
+R program used for analysis using Boxplots, Anova and Kruskal-Wallis test Also logistic regression ML model was used in a python program to explore relationship between UHI and city shape, NDVI, surface water
+
+
 
 # References
 
