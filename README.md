@@ -87,12 +87,12 @@ They are copied in nextcloud. Also raster files are copied to nextcloud
 
 CSV files accessed in program -
 
-City_NDVI_files.csv in data\10_raw_Other_variables folder
-City_surface.csv in data\10_raw_Other_variables folder
-combined_summary_City_Shape.csv in data\10_raw_Other_variables folder
-ML_input_data_coordinates.csv in data\12_Output_python folder
-UHI_NDVI_Swater_Means_data.csv in data\12_Output_python folder
-City_coordinates.csv in data\12_Output_python folder
+City_NDVI_files.csv in data\10_raw_Other_variables folder, 
+City_surface.csv in data\10_raw_Other_variables folder, 
+combined_summary_City_Shape.csv in data\10_raw_Other_variables folder, 
+ML_input_data_coordinates.csv in data\12_Output_python folder, 
+UHI_NDVI_Swater_Means_data.csv in data\12_Output_python folder, 
+City_coordinates.csv in data\12_Output_python folder, 
 Citywise Means [0 -10].csv (11 files numbered 0 to 10) in data\11_Output_R folder
 
 
