@@ -368,10 +368,10 @@ msel <- dplyr::select(m1, Shape, Mean)
 ggline(msel, x = "Shape", y = "Mean",
        order = c("Diamond", "Hourglass", "Pyramid"), 
        add= "mean_se", group = 1,
-       ylab = "Mean", xlab = "City Shape")+
+       ylab = "UHI Cityshape wise Group Mean", xlab = "City Shape")+
   geom_line(data = m1_sum , aes(x=Shape, y=Meanvar, group=1))+
-  labs(title = "Anova plot of UHI Day and Night value " , 
-       subtitle = "Based on city shapes")+
+  labs(title = "Box plot of UHI Day and Night group meanvalues " , 
+       subtitle = "Based on cityshape wise group means and standard error")+
   theme(legend.position = "none",
         panel.grid = element_blank(),
         panel.border = element_rect(colour = "black", fill = NA),
@@ -384,6 +384,7 @@ ggline(msel, x = "Shape", y = "Mean",
 
 
 ggsave("../data/11_Output_R/Anova.png")
+
 
 
 
